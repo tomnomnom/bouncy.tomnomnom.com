@@ -25,6 +25,12 @@
             var canvas = document.getElementById('stage');
             var c = canvas.getContext('2d');
 
+            var pops = [
+                new Audio('/sounds/pop1.wav'),
+                new Audio('/sounds/pop2.wav'),
+                new Audio('/sounds/pop3.wav')
+            ];
+
             var world = {};
             world.gravity = 9.81;
             world.t = 0;
@@ -124,6 +130,9 @@
                     if (d2 < Math.pow(ball.radius + coins[i].r, 2)){
                         world.score++;
                         coins[i].visible = false;
+
+                        var p = Math.floor(Math.random()*pops.length);
+                        pops[p].play();
                     }
 
                     c.beginPath();
