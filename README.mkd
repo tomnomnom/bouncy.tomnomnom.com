@@ -1,3 +1,5 @@
 # Bouncy Ball
 
-Use the arrow keys, get the coins.
+[Play it here](http://bouncy.tomnomnom.com/).
+
+Use the arrow keys or swipe, get the coins.
