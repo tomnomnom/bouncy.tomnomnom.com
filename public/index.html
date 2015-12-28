@@ -37,6 +37,7 @@
             world.lastT = 0;
             world.bgColor = 'rgba(255, 255, 204, 1)';
             world.score = 0;
+            world.soundEnabled = false;
 
             var ball = {};
             ball.y = 10;
@@ -200,6 +201,13 @@
 
                 ball.dy = -(dy/canvas.height) * 20;
                 ball.dx = -(dx/canvas.width) * 20;
+
+                // Fix for Android etc not playing sounds without a user action
+                if (world.soundEnabled) return;
+                for (var i = 0; i < pops.length; i++){
+                    pops[i].play();
+                }
+                world.soundEnabled = true;
             });
 
             document.getElementById('resetButton').onclick = function(){
@@ -208,7 +216,6 @@
                 }
                 world.score = 0;
             };
-            
         };
     </script>
 </html>
