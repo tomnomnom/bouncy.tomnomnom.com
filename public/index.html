@@ -17,6 +17,7 @@
         <p>
             Use the arrow keys or swipe to get the coins.
         </p>
+        <input type="button" value="Reset" id="resetButton">
     </body>
     
     <script>
@@ -191,6 +192,13 @@
                 ball.dy = -(dy/canvas.height) * 20;
                 ball.dx = -(dx/canvas.width) * 20;
             });
+
+            document.getElementById('resetButton').onclick = function(){
+                for (var i = 0; i < coins.length; i++){
+                    coins[i].visible = true;
+                }
+                world.score = 0;
+            };
             
         };
     </script>
