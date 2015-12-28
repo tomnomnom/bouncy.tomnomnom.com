@@ -11,6 +11,7 @@ window.onload = function(){
     var colors = {
         bg: 'rgba(13, 13, 13, 1)',
         coin: 'rgba(242, 183, 5, 1)', 
+        slowCoin: 'rgba(0, 165, 22, 1)', 
         ball: 'rgba(242, 39, 93, 1)',
         text: 'rgba(242, 39, 93, 1)',
     };
@@ -25,11 +26,12 @@ window.onload = function(){
     world.height = 10;
     world.cellWidth = canvas.width / world.width;
     world.cellHeight = canvas.height / world.height;
+    world.slowTimer = null;
 
     world.scene = [
         "           ",
         "  CCC CCC  ",
-        "  CCC CCC  ",
+        "  CSC CSC  ",
         "  CCC CCC  ",
         "   CC CC   ",
         "   CC CC   ",
@@ -72,15 +74,51 @@ window.onload = function(){
             return (d < ball.radius + this.radius);
         };
 
+        coin.pop = function(){
+            var p = Math.floor(Math.random() * pops.length);
+            pops[p].play();
+        };
+
         coin.collide = function(ball){
 
             if (this.hasCollided(ball)){
                 this.visible = false;    
                 world.score++;
-                var p = Math.floor(Math.random() * pops.length);
-                pops[p].play();
+                this.pop();
             }
                 
+        };
+
+        return coin;
+    };
+
+    var newSlowCoin = function(x, y){
+        var coin = newCoin(x, y);
+
+        coin.draw = function(c){
+            if (!this.visible) return;
+            c.beginPath();
+            c.fillStyle = colors.slowCoin;
+            c.arc(this.x+world.cellWidth/2, this.y+world.cellHeight/2, this.radius, 0, Math.PI * 2);
+            c.fill();
+        };
+
+        coin.collide = function(ball){
+            if (this.hasCollided(ball)){
+                this.visible = false;    
+                world.score -= 5;
+                var origRes = ball.resistance;
+                var origRad = ball.radius;
+                ball.resistance = 0.2;
+                ball.radius = 3;
+                this.pop();
+
+                clearTimeout(world.slowTimer);
+                world.slowTimer = setTimeout(function(){
+                    ball.setDefaults();
+                }, 3000);
+            
+            }
         };
 
         return coin;
@@ -100,6 +138,11 @@ window.onload = function(){
                 case 'C':
                     cell = newCoin(x, y);
                     break;
+
+                case 'S':
+                    cell = newSlowCoin(x, y);
+                    break;
+
                 case ' ':
                 default:
                     cell = newSpace(x, y);
@@ -117,11 +160,16 @@ window.onload = function(){
     var ball = {};
     ball.y = 10;
     ball.x = canvas.width / 2;
-    ball.radius = 10;
     ball.dy = 0;
     ball.dx = 0;
     ball.bounciness = 0.8;
-    ball.resistance = 0.01;
+
+    ball.setDefaults = function(){
+        this.radius = 10;
+        this.resistance = 0.01;
+    };
+
+    ball.setDefaults();
 
 
     var drawFrame = function(timestamp){
