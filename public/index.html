@@ -31,11 +31,17 @@
                 new Audio('/sounds/pop3.wav')
             ];
 
+            var colors = {
+                bg: 'rgba(13, 13, 13, 1)',
+                coin: 'rgba(242, 183, 5, 1)', 
+                ball: 'rgba(242, 39, 93, 1)',
+                text: 'rgba(242, 39, 93, 1)',
+            };
+
             var world = {};
             world.gravity = 9.81;
             world.t = 0;
             world.lastT = 0;
-            world.bgColor = 'rgba(255, 255, 204, 1)';
             world.score = 0;
             world.soundEnabled = false;
 
@@ -118,11 +124,11 @@
                 ball.x += ball.dx;
 
                 // Clear the screen
-                c.fillStyle = world.bgColor;
+                c.fillStyle = colors.bg;
                 c.fillRect(0, 0, canvas.width, canvas.height);
 
                 // Draw the coins and check for collisions
-                c.fillStyle = 'rgba(255, 204, 0, 1)';
+                c.fillStyle = colors.coin;
                 for (var i = 0; i < coins.length; i++){
                     if (!coins[i].visible) continue;
 
@@ -144,12 +150,20 @@
                 // Draw the ball
                 c.beginPath();
                 c.arc(ball.x, ball.y, ball.radius, 0, Math.PI * 2);
-                c.fillStyle = 'rgba(50, 50, 50, 1)';
+                c.fillStyle = colors.ball;
                 c.fill();
 
                 // Draw the score
                 c.font = "16px sans-serif";
+                c.textAlign = "left";
+                c.fillStyle = colors.text;
                 c.fillText(world.score, 5, 20);
+
+                // You win?
+                if (world.score == coins.length){
+                    c.textAlign = "center";
+                    c.fillText("You win. Well done, you.", canvas.width/2, canvas.height/2, canvas.width);
+                }
                 
                 window.requestAnimationFrame(drawFrame);
             };
