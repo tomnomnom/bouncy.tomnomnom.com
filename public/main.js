@@ -1,6 +1,6 @@
 window.onload = function(){
-    var canvas = document.getElementById('stage');
-    var c = canvas.getContext('2d');
+    var game = document.getElementById('stage');
+    var c = game.getContext('2d');
 
     var pops = [
         new Audio('/sounds/pop1.wav'),
@@ -24,9 +24,10 @@ window.onload = function(){
     world.soundEnabled = false;
     world.width = 11;
     world.height = 10;
-    world.cellWidth = canvas.width / world.width;
-    world.cellHeight = canvas.height / world.height;
+    world.cellWidth = game.width / world.width;
+    world.cellHeight = game.height / world.height;
     world.slowTimer = null;
+    world.coinCount = 0;
 
     world.scene = [
         "           ",
@@ -83,7 +84,7 @@ window.onload = function(){
 
             if (this.hasCollided(ball)){
                 this.visible = false;    
-                world.score++;
+                game.dispatchEvent(new Event('coin'));
                 this.pop();
             }
                 
@@ -106,23 +107,17 @@ window.onload = function(){
         coin.collide = function(ball){
             if (this.hasCollided(ball)){
                 this.visible = false;    
-                world.score -= 5;
-                var origRes = ball.resistance;
-                var origRad = ball.radius;
-                ball.resistance = 0.2;
-                ball.radius = 3;
                 this.pop();
-
-                clearTimeout(world.slowTimer);
-                world.slowTimer = setTimeout(function(){
-                    ball.setDefaults();
-                }, 3000);
-            
+                game.dispatchEvent(new Event('slowCoin'));
             }
         };
 
         return coin;
     };
+
+    game.addEventListener('newCoin', function(){
+        world.coinCount++;
+    });
 
     world.cells = [];
     var x = 0;
@@ -136,6 +131,7 @@ window.onload = function(){
             var cell = null;
             switch (row[j]){
                 case 'C':
+                    game.dispatchEvent(new Event('newCoin'));
                     cell = newCoin(x, y);
                     break;
 
@@ -159,7 +155,7 @@ window.onload = function(){
 
     var ball = {};
     ball.y = 10;
-    ball.x = canvas.width / 2;
+    ball.x = game.width / 2;
     ball.dy = 0;
     ball.dx = 0;
     ball.bounciness = 0.8;
@@ -181,9 +177,9 @@ window.onload = function(){
         var t = world.t / 1000;
         
         // Hit the bottom?
-        if ((ball.y + ball.radius) >= canvas.height){
+        if ((ball.y + ball.radius) >= game.height){
             ball.dy = -ball.dy * ball.bounciness;
-            ball.y = canvas.height - ball.radius;
+            ball.y = game.height - ball.radius;
         }
 
         // Hit the top?
@@ -199,9 +195,9 @@ window.onload = function(){
         }
 
         // Hit the right?
-        if ((ball.x + ball.radius) >= canvas.width){
+        if ((ball.x + ball.radius) >= game.width){
             ball.dx = -ball.dx * ball.bounciness;
-            ball.x = canvas.width - ball.radius;
+            ball.x = game.width - ball.radius;
         }
 
         // Gravity
@@ -217,7 +213,7 @@ window.onload = function(){
 
         // Clear the screen
         c.fillStyle = colors.bg;
-        c.fillRect(0, 0, canvas.width, canvas.height);
+        c.fillRect(0, 0, game.width, game.height);
 
         // Draw the world
         for (var i = 0; i < world.cells.length; i++){
@@ -245,10 +241,36 @@ window.onload = function(){
         c.fillStyle = colors.text;
         c.fillText(world.score, 5, 20);
 
+        // You win?
+        console.log(world.coinCount);
+        if (world.coinCount == 0){
+            c.textAlign = "center";
+            c.fillText("You win. Well done, you.", game.width/2, game.height/2, game.width);
+        }
+
         window.requestAnimationFrame(drawFrame);
     };
 
     window.requestAnimationFrame(drawFrame);
+
+
+    game.addEventListener('coin', function(){
+        world.score++;
+        world.coinCount--;
+    });
+
+    game.addEventListener('slowCoin', function(){
+        world.score -= 5;
+        var origRes = ball.resistance;
+        var origRad = ball.radius;
+        ball.resistance = 0.2;
+        ball.radius = 3;
+
+        clearTimeout(world.slowTimer);
+        world.slowTimer = setTimeout(function(){
+            ball.setDefaults();
+        }, 3000);
+    });
 
     window.addEventListener('keydown', function(e){
         switch (e.keyCode){
@@ -280,21 +302,21 @@ window.onload = function(){
         startY: 0,
     };
 
-    canvas.addEventListener('touchstart', function(e){
+    game.addEventListener('touchstart', function(e){
         touch.startX = e.changedTouches[0].pageX
         touch.startY = e.changedTouches[0].pageY
     });
 
-    canvas.addEventListener('touchmove', function(e){
+    game.addEventListener('touchmove', function(e){
         e.preventDefault();
     });
 
-    canvas.addEventListener('touchend', function(e){
+    game.addEventListener('touchend', function(e){
         var dx = touch.startX - e.changedTouches[0].pageX;
         var dy = touch.startY - e.changedTouches[0].pageY;
 
-        ball.dy = -(dy/canvas.height) * 20;
-        ball.dx = -(dx/canvas.width) * 20;
+        ball.dy = -(dy/game.height) * 20;
+        ball.dx = -(dx/game.width) * 20;
 
         // Fix for Android etc not playing sounds without a user action
         if (world.soundEnabled) return;
