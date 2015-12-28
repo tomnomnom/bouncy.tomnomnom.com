@@ -1,5 +1,7 @@
 <html>
     <head>
+        <title>Bouncy Ball</title>
+        <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1"/>
         <style>
             canvas {
                 border: 1px solid #666666;
@@ -108,22 +110,17 @@
                 // Draw the coins and check for collisions
                 c.fillStyle = 'rgba(255, 204, 0, 1)';
                 for (var i = 0; i < coins.length; i++){
-                    var coin = coins[i];
-                    if (!coin.visible) continue;
+                    if (!coins[i].visible) continue;
 
                     // Trig check to ball
-                    var a = ball.y - coin.y;
-                    var b = ball.x - coin.x;
-                    var d = Math.sqrt(a*a + b*b);
-
-                    // Collision
-                    if (d < (ball.radius + coin.r)){
+                    var d2 = Math.pow(ball.y - coins[i].y, 2) + Math.pow(ball.x - coins[i].x, 2);
+                    if (d2 < Math.pow(ball.radius + coins[i].r, 2)){
                         world.score++;
                         coins[i].visible = false;
                     }
 
                     c.beginPath();
-                    c.arc(coin.x, coin.y, coin.r, 0, Math.PI * 2);
+                    c.arc(coins[i].x, coins[i].y, coins[i].r, 0, Math.PI * 2);
                     c.fill();
                 }
 
@@ -140,7 +137,9 @@
                 window.requestAnimationFrame(drawFrame);
             };
 
-            window.onkeydown = function(e){
+            window.requestAnimationFrame(drawFrame);
+
+            window.addEventListener('keydown', function(e){
                 switch (e.keyCode){
 
                     case 37:
@@ -160,12 +159,32 @@
 
                     case 40:
                         // Down key
-                        //ball.dy += 10;
+                        ball.dy = 10;
                         break;
                 }
+            });
+
+            var touch = {
+                startX: 0,
+                startY: 0,
             };
 
-            window.requestAnimationFrame(drawFrame);
+            canvas.addEventListener('touchstart', function(e){
+                touch.startX = e.changedTouches[0].pageX
+                touch.startY = e.changedTouches[0].pageY
+            });
+
+            canvas.addEventListener('touchmove', function(e){
+                e.preventDefault();
+            });
+
+            canvas.addEventListener('touchend', function(e){
+                var dx = touch.startX - e.changedTouches[0].pageX;
+                var dy = touch.startY - e.changedTouches[0].pageY;
+
+                ball.dy = -(dy/canvas.height) * 20;
+                ball.dx = -(dx/canvas.width) * 20;
+            });
             
         };
     </script>
