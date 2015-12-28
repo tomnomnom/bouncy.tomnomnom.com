@@ -21,6 +21,67 @@ window.onload = function(){
     world.lastT = 0;
     world.score = 0;
     world.soundEnabled = false;
+    world.width = 11;
+    world.height = 10;
+    world.cellWidth = canvas.width / world.width;
+    world.cellHeight = canvas.height / world.height;
+
+    world.scene = [
+        "           ",
+        "  CCCCCCC  ",
+        "  CCCCCCC  ",
+        "  CCCCCCC  ",
+        "    CCC    ",
+        "    CCC    ",
+        "    CCC    ",
+        "    CCC    ",
+        "           ",
+        "           "
+    ];
+
+    world.cells = [];
+    for (var y = 0; y < world.scene.length; y++){
+        var row = world.scene[y].split('');
+        world.cells[y] = [];
+
+        for (var x = 0; x < row.length; x++){
+            var cell = {};
+            cell.type = row[x];
+            cell.visible = true;
+            cell.draw = function(){};
+            cell.collide = function(){};
+
+            // TODO: replace with newCell() call or similar
+            if (cell.type == 'C'){
+
+                cell.draw = function(x, y, c){
+                    if (!this.visible) return;
+                    c.beginPath();
+                    c.fillStyle = colors.coin;
+                    c.arc(x+world.cellWidth/2, y+world.cellHeight/2, 8, 0, Math.PI * 2);
+                    c.fill();
+                };
+
+                cell.collide = function(x, y, ball){
+                    if (!this.visible) return;
+
+                    var a = ball.x - (x+world.cellWidth/2);
+                    var b = ball.y - (y+world.cellHeight/2);
+                    var d = Math.sqrt(a*a + b*b);
+
+                    if (d < ball.radius + 8){
+                        this.visible = false;    
+                        world.score++;
+                        var p = Math.floor(Math.random() * pops.length);
+                        pops[p].play();
+                    }
+                     
+                };
+            }
+            world.cells[y][x] = cell; 
+        }
+    }
+    console.log(world.cells);
 
     var ball = {};
     ball.y = 10;
@@ -31,31 +92,6 @@ window.onload = function(){
     ball.bounciness = 0.8;
     ball.resistance = 0.01;
 
-    var coins = [];
-    var rows = 8;
-    var cols = 6;
-    var xOffset = (canvas.width / (cols + 1));
-    var yOffset = (canvas.height / (rows + 1));
-    var coinX = xOffset;
-    var coinY = yOffset;
-
-    // Coin init
-    for (var i = 0; i < rows; i++){
-
-        for (var j = 0; j < cols; j++){
-            var coin = {
-                x: coinX,
-                y: coinY,
-                r: 8,
-                visible: true
-            };
-            coins.push(coin);
-
-            coinX += xOffset;
-        }
-        coinX = xOffset;
-        coinY += yOffset;
-    }
 
     var drawFrame = function(timestamp){
 
@@ -104,31 +140,30 @@ window.onload = function(){
         c.fillStyle = colors.bg;
         c.fillRect(0, 0, canvas.width, canvas.height);
 
-        // Draw the coins and check for collisions
-        c.fillStyle = colors.coin;
-        for (var i = 0; i < coins.length; i++){
-            if (!coins[i].visible) continue;
+        // Draw the world
+        var x = 0;
+        var y = 0;
+        for (var i = 0; i < world.cells.length; i++){
+            var row = world.cells[i];
 
-            // Trig check to ball
-            var d2 = Math.pow(ball.y - coins[i].y, 2) + Math.pow(ball.x - coins[i].x, 2);
-            if (d2 < Math.pow(ball.radius + coins[i].r, 2)){
-                world.score++;
-                coins[i].visible = false;
-
-                var p = Math.floor(Math.random()*pops.length);
-                pops[p].play();
+            for (var j = 0; j < row.length; j++){
+                var cell = row[j];
+                c.save();
+                cell.draw(x, y, c);
+                cell.collide(x, y, ball);
+                c.restore();
+                x += world.cellWidth;
             }
-
-            c.beginPath();
-            c.arc(coins[i].x, coins[i].y, coins[i].r, 0, Math.PI * 2);
-            c.fill();
+            x = 0;
+            y += world.cellHeight;
         }
-
+        
         // Draw the ball
         c.beginPath();
         c.arc(ball.x, ball.y, ball.radius, 0, Math.PI * 2);
         c.fillStyle = colors.ball;
         c.fill();
+
 
         // Draw the score
         c.font = "16px sans-serif";
@@ -136,12 +171,6 @@ window.onload = function(){
         c.fillStyle = colors.text;
         c.fillText(world.score, 5, 20);
 
-        // You win?
-        if (world.score == coins.length){
-            c.textAlign = "center";
-            c.fillText("You win. Well done, you.", canvas.width/2, canvas.height/2, canvas.width);
-        }
-        
         window.requestAnimationFrame(drawFrame);
     };
 
@@ -201,10 +230,4 @@ window.onload = function(){
         world.soundEnabled = true;
     });
 
-    document.getElementById('resetButton').onclick = function(){
-        for (var i = 0; i < coins.length; i++){
-            coins[i].visible = true;
-        }
-        world.score = 0;
-    };
 };
