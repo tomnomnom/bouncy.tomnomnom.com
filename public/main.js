@@ -28,60 +28,91 @@ window.onload = function(){
 
     world.scene = [
         "           ",
-        "  CCCCCCC  ",
-        "  CCCCCCC  ",
-        "  CCCCCCC  ",
-        "    CCC    ",
-        "    CCC    ",
-        "    CCC    ",
-        "    CCC    ",
+        "  CCC CCC  ",
+        "  CCC CCC  ",
+        "  CCC CCC  ",
+        "   CC CC   ",
+        "   CC CC   ",
+        "   CC CC   ",
+        "   CC CC   ",
         "           ",
         "           "
     ];
 
-    world.cells = [];
-    for (var y = 0; y < world.scene.length; y++){
-        var row = world.scene[y].split('');
-        world.cells[y] = [];
+    var newCell = function(x, y){
+        return {
+            x: x,
+            y: y,
+            draw: function(){},
+            collide: function(){}
+        };
+    };
+    var newSpace = newCell;
 
-        for (var x = 0; x < row.length; x++){
-            var cell = {};
-            cell.type = row[x];
-            cell.visible = true;
-            cell.draw = function(){};
-            cell.collide = function(){};
+    var newCoin = function(x, y){
+        var coin = newCell(x, y);
+        coin.visible = true;
+        coin.radius = 8;
 
-            // TODO: replace with newCell() call or similar
-            if (cell.type == 'C'){
+        coin.draw = function(c){
+            if (!this.visible) return;
+            c.beginPath();
+            c.fillStyle = colors.coin;
+            c.arc(this.x+world.cellWidth/2, this.y+world.cellHeight/2, this.radius, 0, Math.PI * 2);
+            c.fill();
+        };
 
-                cell.draw = function(x, y, c){
-                    if (!this.visible) return;
-                    c.beginPath();
-                    c.fillStyle = colors.coin;
-                    c.arc(x+world.cellWidth/2, y+world.cellHeight/2, 8, 0, Math.PI * 2);
-                    c.fill();
-                };
+        coin.hasCollided = function(ball){
+            if (!this.visible) return;
 
-                cell.collide = function(x, y, ball){
-                    if (!this.visible) return;
+            var a = ball.x - (this.x+world.cellWidth/2);
+            var b = ball.y - (this.y+world.cellHeight/2);
+            var d = Math.sqrt(a*a + b*b);
 
-                    var a = ball.x - (x+world.cellWidth/2);
-                    var b = ball.y - (y+world.cellHeight/2);
-                    var d = Math.sqrt(a*a + b*b);
+            return (d < ball.radius + this.radius);
+        };
 
-                    if (d < ball.radius + 8){
-                        this.visible = false;    
-                        world.score++;
-                        var p = Math.floor(Math.random() * pops.length);
-                        pops[p].play();
-                    }
-                     
-                };
+        coin.collide = function(ball){
+
+            if (this.hasCollided(ball)){
+                this.visible = false;    
+                world.score++;
+                var p = Math.floor(Math.random() * pops.length);
+                pops[p].play();
             }
-            world.cells[y][x] = cell; 
+                
+        };
+
+        return coin;
+    };
+
+    world.cells = [];
+    var x = 0;
+    var y = 0;
+    for (var i = 0; i < world.scene.length; i++){
+        var row = world.scene[i].split('');
+        world.cells[i] = [];
+
+        for (var j = 0; j < row.length; j++){
+
+            var cell = null;
+            switch (row[j]){
+                case 'C':
+                    cell = newCoin(x, y);
+                    break;
+                case ' ':
+                default:
+                    cell = newSpace(x, y);
+                    break;
+                    
+            }
+            world.cells[i][j] = cell; 
+            x += world.cellWidth;
         }
+        x = 0;
+        y += world.cellHeight;
     }
-    console.log(world.cells);
+
 
     var ball = {};
     ball.y = 10;
@@ -141,21 +172,16 @@ window.onload = function(){
         c.fillRect(0, 0, canvas.width, canvas.height);
 
         // Draw the world
-        var x = 0;
-        var y = 0;
         for (var i = 0; i < world.cells.length; i++){
             var row = world.cells[i];
 
             for (var j = 0; j < row.length; j++){
                 var cell = row[j];
                 c.save();
-                cell.draw(x, y, c);
-                cell.collide(x, y, ball);
+                cell.draw(c);
+                cell.collide(ball);
                 c.restore();
-                x += world.cellWidth;
             }
-            x = 0;
-            y += world.cellHeight;
         }
         
         // Draw the ball
