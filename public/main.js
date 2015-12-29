@@ -11,7 +11,8 @@ window.onload = function(){
     var colors = {
         bg: 'rgba(13, 13, 13, 1)',
         coin: 'rgba(242, 183, 5, 1)', 
-        slowCoin: 'rgba(0, 165, 22, 1)', 
+        fastCoin: 'rgba(0, 165, 22, 1)', 
+        slowCoin: 'rgba(12, 147, 191, 1)', 
         ball: 'rgba(242, 39, 93, 1)',
         text: 'rgba(242, 39, 93, 1)',
     };
@@ -26,50 +27,59 @@ window.onload = function(){
     world.height = 10;
     world.cellWidth = game.width / world.width;
     world.cellHeight = game.height / world.height;
-    world.slowTimer = null;
+    world.ballModTimer = null;
     world.coinCount = 0;
 
     world.scene = [
-        "           ",
+        " CCCC CCCC ",
         "  CCC CCC  ",
         "  CSC CSC  ",
         "  CCC CCC  ",
         "   CC CC   ",
         "   CC CC   ",
         "   CC CC   ",
-        "   CC CC   ",
+        "   FC CF   ",
         "           ",
         "           "
     ];
 
-    var newCell = function(x, y){
+    var newCell = function(x, y, w, h){
         return {
             x: x,
             y: y,
+            w: w,
+            h: h,
             draw: function(){},
             collide: function(){}
         };
     };
     var newSpace = newCell;
 
-    var newCoin = function(x, y){
-        var coin = newCell(x, y);
+    game.addEventListener('newCoin', function(){
+        world.coinCount++;
+    });
+
+
+    var newCoin = function(x, y, w, h){
+        var coin = newCell(x, y, w, h);
         coin.visible = true;
         coin.radius = 8;
+
+        game.dispatchEvent(new Event('newCoin'));
 
         coin.draw = function(c){
             if (!this.visible) return;
             c.beginPath();
             c.fillStyle = colors.coin;
-            c.arc(this.x+world.cellWidth/2, this.y+world.cellHeight/2, this.radius, 0, Math.PI * 2);
+            c.arc(this.x+this.w/2, this.y+this.h/2, this.radius, 0, Math.PI * 2);
             c.fill();
         };
 
         coin.hasCollided = function(ball){
             if (!this.visible) return;
 
-            var a = ball.x - (this.x+world.cellWidth/2);
-            var b = ball.y - (this.y+world.cellHeight/2);
+            var a = ball.x - (this.x+this.w/2);
+            var b = ball.y - (this.y+this.h/2);
             var d = Math.sqrt(a*a + b*b);
 
             return (d < ball.radius + this.radius);
@@ -93,14 +103,15 @@ window.onload = function(){
         return coin;
     };
 
-    var newSlowCoin = function(x, y){
-        var coin = newCoin(x, y);
+    var newSlowCoin = function(x, y, w, h){
+        var coin = newCoin(x, y, w, h);
+        coin.radius = 12;
 
         coin.draw = function(c){
             if (!this.visible) return;
             c.beginPath();
             c.fillStyle = colors.slowCoin;
-            c.arc(this.x+world.cellWidth/2, this.y+world.cellHeight/2, this.radius, 0, Math.PI * 2);
+            c.arc(this.x+this.w/2, this.y+this.h/2, this.radius, 0, Math.PI * 2);
             c.fill();
         };
 
@@ -108,6 +119,7 @@ window.onload = function(){
             if (this.hasCollided(ball)){
                 this.visible = false;    
                 this.pop();
+                game.dispatchEvent(new Event('coin'));
                 game.dispatchEvent(new Event('slowCoin'));
             }
         };
@@ -115,9 +127,61 @@ window.onload = function(){
         return coin;
     };
 
-    game.addEventListener('newCoin', function(){
-        world.coinCount++;
+    game.addEventListener('slowCoin', function(){
+        world.score += 1;
+        var origRes = ball.resistance;
+        var origRad = ball.radius;
+        ball.resistance = 0.2;
+        ball.radius = 3;
+
+        clearTimeout(world.ballModTimer);
+        world.ballModTimer = setTimeout(function(){
+            ball.setDefaults();
+        }, 3000);
     });
+
+    var newFastCoin = function(x, y, w, h){
+        var coin = newCoin(x, y, w, h);
+        coin.radius = 4;
+
+        coin.draw = function(c){
+            if (!this.visible) return;
+            c.beginPath();
+            c.fillStyle = colors.fastCoin;
+            c.arc(this.x+this.w/2, this.y+this.h/2, this.radius, 0, Math.PI * 2);
+            c.fill();
+        };
+
+        coin.collide = function(ball){
+            if (this.hasCollided(ball)){
+                this.visible = false;    
+                this.pop();
+                game.dispatchEvent(new Event('coin'));
+                game.dispatchEvent(new Event('fastCoin'));
+            }
+        };
+        return coin;
+    };
+
+    game.addEventListener('fastCoin', function(){
+        world.score += 5;
+        var origRes = ball.resistance;
+        var origRad = ball.radius;
+        ball.resistance = 0;
+        ball.radius = 20;
+
+        clearTimeout(world.ballModTimer);
+        world.ballModTimer = setTimeout(function(){
+            ball.setDefaults();
+        }, 3000);
+    });
+
+    var cellConstructors = {
+        'C': newCoin,
+        'S': newSlowCoin,
+        'F': newFastCoin,
+        ' ': newSpace
+    };
 
     world.cells = [];
     var x = 0;
@@ -128,24 +192,11 @@ window.onload = function(){
 
         for (var j = 0; j < row.length; j++){
 
-            var cell = null;
-            switch (row[j]){
-                case 'C':
-                    game.dispatchEvent(new Event('newCoin'));
-                    cell = newCoin(x, y);
-                    break;
-
-                case 'S':
-                    cell = newSlowCoin(x, y);
-                    break;
-
-                case ' ':
-                default:
-                    cell = newSpace(x, y);
-                    break;
-                    
+            var cell = cellConstructors[row[j]];
+            if (!cell){
+                cell = newSpace;
             }
-            world.cells[i][j] = cell; 
+            world.cells[i][j] = cell(x, y, world.cellWidth, world.cellHeight); 
             x += world.cellWidth;
         }
         x = 0;
@@ -242,7 +293,6 @@ window.onload = function(){
         c.fillText(world.score, 5, 20);
 
         // You win?
-        console.log(world.coinCount);
         if (world.coinCount == 0){
             c.textAlign = "center";
             c.fillText("You win. Well done, you.", game.width/2, game.height/2, game.width);
@@ -255,21 +305,8 @@ window.onload = function(){
 
 
     game.addEventListener('coin', function(){
-        world.score++;
+        world.score += 2;
         world.coinCount--;
-    });
-
-    game.addEventListener('slowCoin', function(){
-        world.score -= 5;
-        var origRes = ball.resistance;
-        var origRad = ball.radius;
-        ball.resistance = 0.2;
-        ball.radius = 3;
-
-        clearTimeout(world.slowTimer);
-        world.slowTimer = setTimeout(function(){
-            ball.setDefaults();
-        }, 3000);
     });
 
     window.addEventListener('keydown', function(e){
